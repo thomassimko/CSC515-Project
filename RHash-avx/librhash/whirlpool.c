@@ -1,0 +1,314 @@
+/* whirlpool.c - an implementation of the Whirlpool Hash Function.
+ *
+ * Copyright: 2009-2012 Aleksey Kravchenko <rhash.admin@gmail.com>
+ *
+ * Permission is hereby granted,  free of charge,  to any person  obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction,  including without limitation
+ * the rights to  use, copy, modify,  merge, publish, distribute, sublicense,
+ * and/or sell copies  of  the Software,  and to permit  persons  to whom the
+ * Software is furnished to do so.
+ *
+ * This program  is  distributed  in  the  hope  that it will be useful,  but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  Use this program  at  your own risk!
+ *
+ * Documentation:
+ * P. S. L. M. Barreto, V. Rijmen, ``The Whirlpool hashing function,''
+ * NESSIE submission, 2000 (tweaked version, 2001)
+ *
+ * The algorithm is named after the Whirlpool Galaxy in Canes Venatici.
+ */
+
+#include <assert.h>
+#include <string.h>
+#include "byte_order.h"
+#include "whirlpool.h"
+#include <stdio.h>
+
+/**
+ * Initialize context before calculaing hash.
+ *
+ * @param ctx context to initialize
+ */
+void rhash_whirlpool_init(struct whirlpool_ctx* ctx)
+{
+	ctx->length = 0;
+	memset(ctx->hash, 0, sizeof(ctx->hash));
+}
+
+/* Algorithm S-Box */
+extern uint64_t rhash_whirlpool_sbox[8][256];
+
+//#define WHIRLPOOL_OP(src, shift) ( \
+//   rhash_whirlpool_sbox[0][(int)(src[ shift      & 7] >> 56)       ] ^ \
+//   rhash_whirlpool_sbox[1][(int)(src[(shift + 7) & 7] >> 48) & 0xff] ^ \
+//   rhash_whirlpool_sbox[2][(int)(src[(shift + 6) & 7] >> 40) & 0xff] ^ \
+//   rhash_whirlpool_sbox[3][(int)(src[(shift + 5) & 7] >> 32) & 0xff] ^ \
+//   rhash_whirlpool_sbox[4][(int)(src[(shift + 4) & 7] >> 24) & 0xff] ^ \
+//   rhash_whirlpool_sbox[5][(int)(src[(shift + 3) & 7] >> 16) & 0xff] ^ \
+//   rhash_whirlpool_sbox[6][(int)(src[(shift + 2) & 7] >>  8) & 0xff] ^ \
+//   rhash_whirlpool_sbox[7][(int)(src[(shift + 1) & 7]      ) & 0xff])
+
+#define WHIRLPOOL_OP(a,b,c,d,e,f,g,h) ( \
+   rhash_whirlpool_sbox[0][(int)a] ^ \
+   rhash_whirlpool_sbox[1][(int)b] ^ \
+   rhash_whirlpool_sbox[2][(int)c] ^ \
+   rhash_whirlpool_sbox[3][(int)d] ^ \
+   rhash_whirlpool_sbox[4][(int)e] ^ \
+   rhash_whirlpool_sbox[5][(int)f] ^ \
+   rhash_whirlpool_sbox[6][(int)g] ^ \
+   rhash_whirlpool_sbox[7][(int)h])
+
+
+static u256* get_sbox_values(uint64_t* src, int offset)
+{
+   
+   u256* vec = malloc(2 * sizeof(u256));
+   
+   vec[0] = _mm256_setr_epi64x(src[ offset      & 7],
+         src[(offset + 1) & 7],
+         src[(offset + 2) & 7],
+         src[(offset + 3) & 7]);
+   
+   vec[1] = _mm256_setr_epi64x(src[(offset + 4) & 7],
+         src[(offset + 5) & 7],
+         src[(offset + 6) & 7],
+         src[(offset + 7) & 7]);
+   
+   return vec;
+}
+
+static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m) {
+   u256 ffs = _mm256_setr_epi64x(0xff,0xff,0xff,0xff);
+   
+   u256* vecArr = get_sbox_values(K[m], 0);
+   u256 vec561 = SHIFTR(vecArr[0], 56);
+   u256 vec562 = SHIFTR(vecArr[1], 56);
+   
+   vecArr = get_sbox_values(K[m], 7);
+   u256 vec481 = AND(SHIFTR(vecArr[0], 48), ffs);
+   u256 vec482 = AND(SHIFTR(vecArr[1], 48), ffs);
+   
+   vecArr = get_sbox_values(K[m], 6);
+   u256 vec401 = AND(SHIFTR(vecArr[0], 40), ffs);
+   u256 vec402 = AND(SHIFTR(vecArr[1], 40), ffs);
+   
+   vecArr = get_sbox_values(K[m], 5);
+   u256 vec321 = AND(SHIFTR(vecArr[0], 32), ffs);
+   u256 vec322 = AND(SHIFTR(vecArr[1], 32), ffs);
+   
+   vecArr = get_sbox_values(K[m], 4);
+   u256 vec241 = AND(SHIFTR(vecArr[0], 24), ffs);
+   u256 vec242 = AND(SHIFTR(vecArr[1], 24), ffs);
+   
+   vecArr = get_sbox_values(K[m], 3);
+   u256 vec161 = AND(SHIFTR(vecArr[0], 16), ffs);
+   u256 vec162 = AND(SHIFTR(vecArr[1], 16), ffs);
+   
+   vecArr = get_sbox_values(K[m], 2);
+   u256 vec081 = AND(SHIFTR(vecArr[0], 8), ffs);
+   u256 vec082 = AND(SHIFTR(vecArr[1], 8), ffs);
+   
+   vecArr = get_sbox_values(K[m], 1);
+   u256 vec001 = AND(vecArr[0], ffs);
+   u256 vec002 = AND(vecArr[1], ffs);
+   
+   uint64_t* x561 = (uint64_t*) &vec561;
+   uint64_t* x562 = (uint64_t*) &vec562;
+   
+   uint64_t* x481 = (uint64_t*) &vec481;
+   uint64_t* x482 = (uint64_t*) &vec482;
+   
+   uint64_t* x401 = (uint64_t*) &vec401;
+   uint64_t* x402 = (uint64_t*) &vec402;
+   
+   uint64_t* x321 = (uint64_t*) &vec321;
+   uint64_t* x322 = (uint64_t*) &vec322;
+   
+   uint64_t* x241 = (uint64_t*) &vec241;
+   uint64_t* x242 = (uint64_t*) &vec242;
+   
+   uint64_t* x161 = (uint64_t*) &vec161;
+   uint64_t* x162 = (uint64_t*) &vec162;
+   
+   uint64_t* x081 = (uint64_t*) &vec081;
+   uint64_t* x082 = (uint64_t*) &vec082;
+   
+   uint64_t* x001 = (uint64_t*) &vec001;
+   uint64_t* x002 = (uint64_t*) &vec002;
+   
+   K[m ^ 1][0] = WHIRLPOOL_OP(x561[0], x481[0], x401[0], x321[0], x241[0], x161[0], x081[0], x001[0]);
+   K[m ^ 1][1] = WHIRLPOOL_OP(x561[1], x481[1], x401[1], x321[1], x241[1], x161[1], x081[1], x001[1]);
+   K[m ^ 1][2] = WHIRLPOOL_OP(x561[2], x481[2], x401[2], x321[2], x241[2], x161[2], x081[2], x001[2]);
+   K[m ^ 1][3] = WHIRLPOOL_OP(x561[3], x481[3], x401[3], x321[3], x241[3], x161[3], x081[3], x001[3]);
+   K[m ^ 1][4] = WHIRLPOOL_OP(x562[0], x482[0], x402[0], x322[0], x242[0], x162[0], x082[0], x002[0]);
+   K[m ^ 1][5] = WHIRLPOOL_OP(x562[1], x482[1], x402[1], x322[1], x242[1], x162[1], x082[1], x002[1]);
+   K[m ^ 1][6] = WHIRLPOOL_OP(x562[2], x482[2], x402[2], x322[2], x242[2], x162[2], x082[2], x002[2]);
+   K[m ^ 1][7] = WHIRLPOOL_OP(x562[3], x482[3], x402[3], x322[3], x242[3], x162[3], x082[3], x002[3]);
+}
+
+/**
+ * The core transformation. Process a 512-bit block.
+ *
+ * @param hash algorithm state
+ * @param block the message block to process
+ */
+static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
+{
+	int i;                /* loop counter */
+	uint64_t K[2][8];       /* key */
+	uint64_t state[2][8];   /* state */
+   
+   printf("Using AVX!\n");
+
+	/* alternating binary flags */
+	unsigned int m = 0;
+
+	/* the number of rounds of the internal dedicated block cipher */
+	const int number_of_rounds = 10;
+
+	/* array used in the rounds */
+	static const uint64_t rc[10] = {
+		I64(0x1823c6e887b8014f),
+		I64(0x36a6d2f5796f9152),
+		I64(0x60bc9b8ea30c7b35),
+		I64(0x1de0d7c22e4bfe57),
+		I64(0x157737e59ff04ada),
+		I64(0x58c9290ab1a06b85),
+		I64(0xbd5d10f4cb3e0567),
+		I64(0xe427418ba77d95d8),
+		I64(0xfbee7c66dd17479e),
+		I64(0xca2dbf07ad5a8333)
+	};
+
+	/* map the message buffer to a block */
+	for (i = 0; i < 8; i++) {
+		/* store K^0 and xor it with the intermediate hash state */
+		K[0][i] = hash[i];
+		state[0][i] = be2me_64(p_block[i]) ^ hash[i];
+		hash[i] = state[0][i];
+	}
+
+	/* iterate over algorithm rounds */
+	for (i = 0; i < number_of_rounds; i++)
+	{
+      
+      OP_WHIRLPOOL_FUNC(K, m);
+      K[m ^ 1][0] = K[m ^ 1][0] ^ rc[i];
+   
+      
+//      K[1][0] = WHIRLPOOL_OP(K[0], 0) ^ rc[i];
+//      K[1][1] = WHIRLPOOL_OP(K[0], 1);
+//      K[1][2] = WHIRLPOOL_OP(K[0], 2);
+//      K[1][3] = WHIRLPOOL_OP(K[0], 3);
+//      K[1][4] = WHIRLPOOL_OP(K[0], 4);
+//      K[1][5] = WHIRLPOOL_OP(K[0], 5);
+//      K[1][6] = WHIRLPOOL_OP(K[0], 6);
+//      K[1][7] = WHIRLPOOL_OP(K[0], 7);
+      
+      OP_WHIRLPOOL_FUNC(state, m);
+
+		/* apply the i-th round transformation */
+		state[m ^ 1][0] = state[m][0] ^ K[m ^ 1][0];
+		state[m ^ 1][1] = state[m][1] ^ K[m ^ 1][1];
+		state[m ^ 1][2] = state[m][2] ^ K[m ^ 1][2];
+		state[m ^ 1][3] = state[m][3] ^ K[m ^ 1][3];
+		state[m ^ 1][4] = state[m][4] ^ K[m ^ 1][4];
+		state[m ^ 1][5] = state[m][5] ^ K[m ^ 1][5];
+		state[m ^ 1][6] = state[m][6] ^ K[m ^ 1][6];
+		state[m ^ 1][7] = state[m][7] ^ K[m ^ 1][7];
+
+		m = m ^ 1;
+	}
+
+	/* apply the Miyaguchi-Preneel compression function */
+	hash[0] ^= state[0][0];
+	hash[1] ^= state[0][1];
+	hash[2] ^= state[0][2];
+	hash[3] ^= state[0][3];
+	hash[4] ^= state[0][4];
+	hash[5] ^= state[0][5];
+	hash[6] ^= state[0][6];
+	hash[7] ^= state[0][7];
+}
+
+/**
+ * Calculate message hash.
+ * Can be called repeatedly with chunks of the message to be hashed.
+ *
+ * @param ctx the algorithm context containing current hashing state
+ * @param msg message chunk
+ * @param size length of the message chunk
+ */
+void rhash_whirlpool_update(whirlpool_ctx *ctx, const unsigned char* msg, size_t size)
+{
+	unsigned index = (unsigned)ctx->length & 63;
+	unsigned left;
+	ctx->length += size;
+
+	/* fill partial block */
+	if (index) {
+		left = whirlpool_block_size - index;
+		memcpy(ctx->message + index, msg, (size < left ? size : left));
+		if (size < left) return;
+
+		/* process partial block */
+		rhash_whirlpool_process_block(ctx->hash, (uint64_t*)ctx->message);
+		msg  += left;
+		size -= left;
+	}
+	while (size >= whirlpool_block_size) {
+		uint64_t* aligned_message_block;
+		if (IS_ALIGNED_64(msg)) {
+			/* the most common case is processing of an already aligned message
+			without copying it */
+			aligned_message_block = (uint64_t*)msg;
+		} else {
+			memcpy(ctx->message, msg, whirlpool_block_size);
+			aligned_message_block = (uint64_t*)ctx->message;
+		}
+
+		rhash_whirlpool_process_block(ctx->hash, aligned_message_block);
+		msg += whirlpool_block_size;
+		size -= whirlpool_block_size;
+	}
+	if (size) {
+		/* save leftovers */
+		memcpy(ctx->message, msg, size);
+	}
+}
+
+/**
+ * Store calculated hash into the given array.
+ *
+ * @param ctx the algorithm context containing current hashing state
+ * @param result calculated hash in binary form
+ */
+void rhash_whirlpool_final(whirlpool_ctx *ctx, unsigned char* result)
+{
+	unsigned index = (unsigned)ctx->length & 63;
+	uint64_t* msg64 = (uint64_t*)ctx->message;
+
+	/* pad message and run for last block */
+	ctx->message[index++] = 0x80;
+
+	/* if no room left in the message to store 256-bit message length */
+	if (index > 32) {
+		/* then pad the rest with zeros and process it */
+		while (index < 64) {
+			ctx->message[index++] = 0;
+		}
+		rhash_whirlpool_process_block(ctx->hash, msg64);
+		index = 0;
+	}
+	/* due to optimization actually only 64-bit of message length are stored */
+	while (index < 56) {
+		ctx->message[index++] = 0;
+	}
+	msg64[7] = be2me_64(ctx->length << 3);
+	rhash_whirlpool_process_block(ctx->hash, msg64);
+
+	/* save result hash */
+	be64_copy(result, 0, ctx->hash, 64);
+}
