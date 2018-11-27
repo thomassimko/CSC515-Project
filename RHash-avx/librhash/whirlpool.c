@@ -82,37 +82,37 @@ static u256* get_sbox_values(uint64_t* src, int offset)
 static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m) {
    u256 ffs = _mm256_setr_epi64x(0xff,0xff,0xff,0xff);
    
-   u256* vecArr = get_sbox_values(K[m], 0);
-   u256 vec561 = SHIFTR(vecArr[0], 56);
-   u256 vec562 = SHIFTR(vecArr[1], 56);
+   u256* vecArr1 = get_sbox_values(K[m], 0);
+   u256 vec561 = SHIFTR(vecArr1[0], 56);
+   u256 vec562 = SHIFTR(vecArr1[1], 56);
    
-   vecArr = get_sbox_values(K[m], 7);
-   u256 vec481 = AND(SHIFTR(vecArr[0], 48), ffs);
-   u256 vec482 = AND(SHIFTR(vecArr[1], 48), ffs);
+   u256* vecArr2 = get_sbox_values(K[m], 7);
+   u256 vec481 = AND(SHIFTR(vecArr2[0], 48), ffs);
+   u256 vec482 = AND(SHIFTR(vecArr2[1], 48), ffs);
    
-   vecArr = get_sbox_values(K[m], 6);
-   u256 vec401 = AND(SHIFTR(vecArr[0], 40), ffs);
-   u256 vec402 = AND(SHIFTR(vecArr[1], 40), ffs);
+   u256* vecArr3 = get_sbox_values(K[m], 6);
+   u256 vec401 = AND(SHIFTR(vecArr3[0], 40), ffs);
+   u256 vec402 = AND(SHIFTR(vecArr3[1], 40), ffs);
    
-   vecArr = get_sbox_values(K[m], 5);
-   u256 vec321 = AND(SHIFTR(vecArr[0], 32), ffs);
-   u256 vec322 = AND(SHIFTR(vecArr[1], 32), ffs);
+   u256* vecArr4 = get_sbox_values(K[m], 5);
+   u256 vec321 = AND(SHIFTR(vecArr4[0], 32), ffs);
+   u256 vec322 = AND(SHIFTR(vecArr4[1], 32), ffs);
    
-   vecArr = get_sbox_values(K[m], 4);
-   u256 vec241 = AND(SHIFTR(vecArr[0], 24), ffs);
-   u256 vec242 = AND(SHIFTR(vecArr[1], 24), ffs);
+   u256* vecArr5 = get_sbox_values(K[m], 4);
+   u256 vec241 = AND(SHIFTR(vecArr5[0], 24), ffs);
+   u256 vec242 = AND(SHIFTR(vecArr5[1], 24), ffs);
    
-   vecArr = get_sbox_values(K[m], 3);
-   u256 vec161 = AND(SHIFTR(vecArr[0], 16), ffs);
-   u256 vec162 = AND(SHIFTR(vecArr[1], 16), ffs);
+   u256* vecArr6 = get_sbox_values(K[m], 3);
+   u256 vec161 = AND(SHIFTR(vecArr6[0], 16), ffs);
+   u256 vec162 = AND(SHIFTR(vecArr6[1], 16), ffs);
    
-   vecArr = get_sbox_values(K[m], 2);
-   u256 vec081 = AND(SHIFTR(vecArr[0], 8), ffs);
-   u256 vec082 = AND(SHIFTR(vecArr[1], 8), ffs);
+   u256* vecArr7 = get_sbox_values(K[m], 2);
+   u256 vec081 = AND(SHIFTR(vecArr7[0], 8), ffs);
+   u256 vec082 = AND(SHIFTR(vecArr7[1], 8), ffs);
    
-   vecArr = get_sbox_values(K[m], 1);
-   u256 vec001 = AND(vecArr[0], ffs);
-   u256 vec002 = AND(vecArr[1], ffs);
+   u256* vecArr8 = get_sbox_values(K[m], 1);
+   u256 vec001 = AND(vecArr8[0], ffs);
+   u256 vec002 = AND(vecArr8[1], ffs);
    
    uint64_t* x561 = (uint64_t*) &vec561;
    uint64_t* x562 = (uint64_t*) &vec562;
@@ -146,6 +146,15 @@ static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m) {
    K[m ^ 1][5] = WHIRLPOOL_OP(x562[1], x482[1], x402[1], x322[1], x242[1], x162[1], x082[1], x002[1]);
    K[m ^ 1][6] = WHIRLPOOL_OP(x562[2], x482[2], x402[2], x322[2], x242[2], x162[2], x082[2], x002[2]);
    K[m ^ 1][7] = WHIRLPOOL_OP(x562[3], x482[3], x402[3], x322[3], x242[3], x162[3], x082[3], x002[3]);
+   
+   free(vecArr1);
+   free(vecArr2);
+   free(vecArr3);
+   free(vecArr4);
+   free(vecArr5);
+   free(vecArr6);
+   free(vecArr7);
+   free(vecArr8);
 }
 
 /**
@@ -160,8 +169,6 @@ static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
 	uint64_t K[2][8];       /* key */
 	uint64_t state[2][8];   /* state */
    
-   printf("Using AVX!\n");
-
 	/* alternating binary flags */
 	unsigned int m = 0;
 
@@ -196,7 +203,7 @@ static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
       
       OP_WHIRLPOOL_FUNC(K, m);
       K[m ^ 1][0] = K[m ^ 1][0] ^ rc[i];
-   
+      
       
 //      K[1][0] = WHIRLPOOL_OP(K[0], 0) ^ rc[i];
 //      K[1][1] = WHIRLPOOL_OP(K[0], 1);
@@ -210,14 +217,14 @@ static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
       OP_WHIRLPOOL_FUNC(state, m);
 
 		/* apply the i-th round transformation */
-		state[m ^ 1][0] = state[m][0] ^ K[m ^ 1][0];
-		state[m ^ 1][1] = state[m][1] ^ K[m ^ 1][1];
-		state[m ^ 1][2] = state[m][2] ^ K[m ^ 1][2];
-		state[m ^ 1][3] = state[m][3] ^ K[m ^ 1][3];
-		state[m ^ 1][4] = state[m][4] ^ K[m ^ 1][4];
-		state[m ^ 1][5] = state[m][5] ^ K[m ^ 1][5];
-		state[m ^ 1][6] = state[m][6] ^ K[m ^ 1][6];
-		state[m ^ 1][7] = state[m][7] ^ K[m ^ 1][7];
+		state[m ^ 1][0] = state[m ^ 1][0] ^ K[m ^ 1][0];
+		state[m ^ 1][1] = state[m ^ 1][1] ^ K[m ^ 1][1];
+		state[m ^ 1][2] = state[m ^ 1][2] ^ K[m ^ 1][2];
+		state[m ^ 1][3] = state[m ^ 1][3] ^ K[m ^ 1][3];
+		state[m ^ 1][4] = state[m ^ 1][4] ^ K[m ^ 1][4];
+		state[m ^ 1][5] = state[m ^ 1][5] ^ K[m ^ 1][5];
+		state[m ^ 1][6] = state[m ^ 1][6] ^ K[m ^ 1][6];
+		state[m ^ 1][7] = state[m ^ 1][7] ^ K[m ^ 1][7];
 
 		m = m ^ 1;
 	}
