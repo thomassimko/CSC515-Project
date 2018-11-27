@@ -61,58 +61,58 @@ extern uint64_t rhash_whirlpool_sbox[8][256];
    rhash_whirlpool_sbox[7][(int)h])
 
 
-static u256* get_sbox_values(uint64_t* src, int offset)
+static u256 get_sbox_values(uint64_t* src, int offset)
 {
    
-   u256* vec = malloc(2 * sizeof(u256));
-   
-   vec[0] = _mm256_setr_epi64x(src[ offset      & 7],
+   return _mm256_setr_epi64x(src[ offset      & 7],
          src[(offset + 1) & 7],
          src[(offset + 2) & 7],
          src[(offset + 3) & 7]);
-   
-   vec[1] = _mm256_setr_epi64x(src[(offset + 4) & 7],
-         src[(offset + 5) & 7],
-         src[(offset + 6) & 7],
-         src[(offset + 7) & 7]);
-   
-   return vec;
 }
 
 static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m) {
    u256 ffs = _mm256_setr_epi64x(0xff,0xff,0xff,0xff);
    
-   u256* vecArr1 = get_sbox_values(K[m], 0);
-   u256 vec561 = SHIFTR(vecArr1[0], 56);
-   u256 vec562 = SHIFTR(vecArr1[1], 56);
+   u256 vecArr1 = get_sbox_values(K[m], 0);
+   u256 vecArr2 = get_sbox_values(K[m], 4);
+   u256 vec561 = SHIFTR(vecArr1, 56);
+   u256 vec562 = SHIFTR(vecArr2, 56);
    
-   u256* vecArr2 = get_sbox_values(K[m], 7);
-   u256 vec481 = AND(SHIFTR(vecArr2[0], 48), ffs);
-   u256 vec482 = AND(SHIFTR(vecArr2[1], 48), ffs);
    
-   u256* vecArr3 = get_sbox_values(K[m], 6);
-   u256 vec401 = AND(SHIFTR(vecArr3[0], 40), ffs);
-   u256 vec402 = AND(SHIFTR(vecArr3[1], 40), ffs);
+   vecArr1 = get_sbox_values(K[m], 7);
+   vecArr2 = get_sbox_values(K[m], 11);
+   u256 vec481 = AND(SHIFTR(vecArr1, 48), ffs);
+   u256 vec482 = AND(SHIFTR(vecArr2, 48), ffs);
    
-   u256* vecArr4 = get_sbox_values(K[m], 5);
-   u256 vec321 = AND(SHIFTR(vecArr4[0], 32), ffs);
-   u256 vec322 = AND(SHIFTR(vecArr4[1], 32), ffs);
+   vecArr1 = get_sbox_values(K[m], 6);
+   vecArr2 = get_sbox_values(K[m], 10);
+   u256 vec401 = AND(SHIFTR(vecArr1, 40), ffs);
+   u256 vec402 = AND(SHIFTR(vecArr2, 40), ffs);
    
-   u256* vecArr5 = get_sbox_values(K[m], 4);
-   u256 vec241 = AND(SHIFTR(vecArr5[0], 24), ffs);
-   u256 vec242 = AND(SHIFTR(vecArr5[1], 24), ffs);
+   vecArr1 = get_sbox_values(K[m], 5);
+   vecArr2 = get_sbox_values(K[m], 9);
+   u256 vec321 = AND(SHIFTR(vecArr1, 32), ffs);
+   u256 vec322 = AND(SHIFTR(vecArr2, 32), ffs);
    
-   u256* vecArr6 = get_sbox_values(K[m], 3);
-   u256 vec161 = AND(SHIFTR(vecArr6[0], 16), ffs);
-   u256 vec162 = AND(SHIFTR(vecArr6[1], 16), ffs);
+   vecArr1 = get_sbox_values(K[m], 4);
+   vecArr2 = get_sbox_values(K[m], 8);
+   u256 vec241 = AND(SHIFTR(vecArr1, 24), ffs);
+   u256 vec242 = AND(SHIFTR(vecArr2, 24), ffs);
    
-   u256* vecArr7 = get_sbox_values(K[m], 2);
-   u256 vec081 = AND(SHIFTR(vecArr7[0], 8), ffs);
-   u256 vec082 = AND(SHIFTR(vecArr7[1], 8), ffs);
+   vecArr1 = get_sbox_values(K[m], 3);
+   vecArr2 = get_sbox_values(K[m], 7);
+   u256 vec161 = AND(SHIFTR(vecArr1, 16), ffs);
+   u256 vec162 = AND(SHIFTR(vecArr2, 16), ffs);
    
-   u256* vecArr8 = get_sbox_values(K[m], 1);
-   u256 vec001 = AND(vecArr8[0], ffs);
-   u256 vec002 = AND(vecArr8[1], ffs);
+   vecArr1 = get_sbox_values(K[m], 2);
+   vecArr2 = get_sbox_values(K[m], 6);
+   u256 vec081 = AND(SHIFTR(vecArr1, 8), ffs);
+   u256 vec082 = AND(SHIFTR(vecArr2, 8), ffs);
+   
+   vecArr1 = get_sbox_values(K[m], 1);
+   vecArr2 = get_sbox_values(K[m], 5);
+   u256 vec001 = AND(vecArr1, ffs);
+   u256 vec002 = AND(vecArr2, ffs);
    
    uint64_t* x561 = (uint64_t*) &vec561;
    uint64_t* x562 = (uint64_t*) &vec562;
@@ -146,15 +146,6 @@ static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m) {
    K[m ^ 1][5] = WHIRLPOOL_OP(x562[1], x482[1], x402[1], x322[1], x242[1], x162[1], x082[1], x002[1]);
    K[m ^ 1][6] = WHIRLPOOL_OP(x562[2], x482[2], x402[2], x322[2], x242[2], x162[2], x082[2], x002[2]);
    K[m ^ 1][7] = WHIRLPOOL_OP(x562[3], x482[3], x402[3], x322[3], x242[3], x162[3], x082[3], x002[3]);
-   
-   free(vecArr1);
-   free(vecArr2);
-   free(vecArr3);
-   free(vecArr4);
-   free(vecArr5);
-   free(vecArr6);
-   free(vecArr7);
-   free(vecArr8);
 }
 
 /**
