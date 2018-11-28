@@ -65,9 +65,9 @@ static u256 get_sbox_values(uint64_t* src, int offset)
 {
    
    return _mm256_setr_epi64x(src[ offset      & 7],
-         src[(offset + 1) & 7],
-         src[(offset + 2) & 7],
-         src[(offset + 3) & 7]);
+                             src[(offset + 1) & 7],
+                             src[(offset + 2) & 7],
+                             src[(offset + 3) & 7]);
 }
 
 static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m) {

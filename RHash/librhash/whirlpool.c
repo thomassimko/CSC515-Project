@@ -50,6 +50,15 @@ extern uint64_t rhash_whirlpool_sbox[8][256];
 	rhash_whirlpool_sbox[6][(int)(src[(shift + 2) & 7] >>  8) & 0xff] ^ \
 	rhash_whirlpool_sbox[7][(int)(src[(shift + 1) & 7]      ) & 0xff])
 
+//0  1
+//7  8
+//6  7
+//5  6
+//4  5
+//3  4
+//2  3
+//1  2
+
 /**
  * The core transformation. Process a 512-bit block.
  *
@@ -93,7 +102,6 @@ static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
 	/* iterate over algorithm rounds */
 	for (i = 0; i < number_of_rounds; i++)
 	{
-      printf("here\n");
       
 		/* compute K^i from K^{i-1} */
 		K[m ^ 1][0] = WHIRLPOOL_OP(K[m], 0) ^ rc[i];
