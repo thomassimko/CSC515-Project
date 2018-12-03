@@ -50,15 +50,15 @@ extern uint64_t rhash_whirlpool_sbox[8][256];
 //   rhash_whirlpool_sbox[6][(int)(src[(shift + 2) & 7] >>  8) & 0xff] ^ \
 //   rhash_whirlpool_sbox[7][(int)(src[(shift + 1) & 7]      ) & 0xff])
 
-#define WHIRLPOOL_OP(a,b,c,d,e,f,g,h) ( \
-   rhash_whirlpool_sbox[0][(int)a] ^ \
-   rhash_whirlpool_sbox[1][(int)b] ^ \
-   rhash_whirlpool_sbox[2][(int)c] ^ \
-   rhash_whirlpool_sbox[3][(int)d] ^ \
-   rhash_whirlpool_sbox[4][(int)e] ^ \
-   rhash_whirlpool_sbox[5][(int)f] ^ \
-   rhash_whirlpool_sbox[6][(int)g] ^ \
-   rhash_whirlpool_sbox[7][(int)h])
+//#define WHIRLPOOL_OP(a,b,c,d,e,f,g,h) ( \
+//   rhash_whirlpool_sbox[0][(int)a] ^ \
+//   rhash_whirlpool_sbox[1][(int)b] ^ \
+//   rhash_whirlpool_sbox[2][(int)c] ^ \
+//   rhash_whirlpool_sbox[3][(int)d] ^ \
+//   rhash_whirlpool_sbox[4][(int)e] ^ \
+//   rhash_whirlpool_sbox[5][(int)f] ^ \
+//   rhash_whirlpool_sbox[6][(int)g] ^ \
+//   rhash_whirlpool_sbox[7][(int)h])
 
 
 static u256 get_sbox_values(uint64_t* src, int offset)
@@ -70,83 +70,78 @@ static u256 get_sbox_values(uint64_t* src, int offset)
                              src[(offset + 3) & 7]);
 }
 
-static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m) {
-   u256 ffs = _mm256_setr_epi64x(0xff,0xff,0xff,0xff);
-   
-   u256 vecArr1 = get_sbox_values(K[m], 0);
-   u256 vecArr2 = get_sbox_values(K[m], 4);
-   u256 vec561 = SHIFTR(vecArr1, 56);
-   u256 vec562 = SHIFTR(vecArr2, 56);
-   
-   
-   vecArr1 = get_sbox_values(K[m], 7);
-   vecArr2 = get_sbox_values(K[m], 11);
-   u256 vec481 = AND(SHIFTR(vecArr1, 48), ffs);
-   u256 vec482 = AND(SHIFTR(vecArr2, 48), ffs);
-   
-   vecArr1 = get_sbox_values(K[m], 6);
-   vecArr2 = get_sbox_values(K[m], 10);
-   u256 vec401 = AND(SHIFTR(vecArr1, 40), ffs);
-   u256 vec402 = AND(SHIFTR(vecArr2, 40), ffs);
-   
-   vecArr1 = get_sbox_values(K[m], 5);
-   vecArr2 = get_sbox_values(K[m], 9);
-   u256 vec321 = AND(SHIFTR(vecArr1, 32), ffs);
-   u256 vec322 = AND(SHIFTR(vecArr2, 32), ffs);
-   
-   vecArr1 = get_sbox_values(K[m], 4);
-   vecArr2 = get_sbox_values(K[m], 8);
-   u256 vec241 = AND(SHIFTR(vecArr1, 24), ffs);
-   u256 vec242 = AND(SHIFTR(vecArr2, 24), ffs);
-   
-   vecArr1 = get_sbox_values(K[m], 3);
-   vecArr2 = get_sbox_values(K[m], 7);
-   u256 vec161 = AND(SHIFTR(vecArr1, 16), ffs);
-   u256 vec162 = AND(SHIFTR(vecArr2, 16), ffs);
-   
-   vecArr1 = get_sbox_values(K[m], 2);
-   vecArr2 = get_sbox_values(K[m], 6);
-   u256 vec081 = AND(SHIFTR(vecArr1, 8), ffs);
-   u256 vec082 = AND(SHIFTR(vecArr2, 8), ffs);
-   
-   vecArr1 = get_sbox_values(K[m], 1);
-   vecArr2 = get_sbox_values(K[m], 5);
-   u256 vec001 = AND(vecArr1, ffs);
-   u256 vec002 = AND(vecArr2, ffs);
-   
-   uint64_t* x561 = (uint64_t*) &vec561;
-   uint64_t* x562 = (uint64_t*) &vec562;
-   
-   uint64_t* x481 = (uint64_t*) &vec481;
-   uint64_t* x482 = (uint64_t*) &vec482;
-   
-   uint64_t* x401 = (uint64_t*) &vec401;
-   uint64_t* x402 = (uint64_t*) &vec402;
-   
-   uint64_t* x321 = (uint64_t*) &vec321;
-   uint64_t* x322 = (uint64_t*) &vec322;
-   
-   uint64_t* x241 = (uint64_t*) &vec241;
-   uint64_t* x242 = (uint64_t*) &vec242;
-   
-   uint64_t* x161 = (uint64_t*) &vec161;
-   uint64_t* x162 = (uint64_t*) &vec162;
-   
-   uint64_t* x081 = (uint64_t*) &vec081;
-   uint64_t* x082 = (uint64_t*) &vec082;
-   
-   uint64_t* x001 = (uint64_t*) &vec001;
-   uint64_t* x002 = (uint64_t*) &vec002;
-   
-   K[m ^ 1][0] = WHIRLPOOL_OP(x561[0], x481[0], x401[0], x321[0], x241[0], x161[0], x081[0], x001[0]);
-   K[m ^ 1][1] = WHIRLPOOL_OP(x561[1], x481[1], x401[1], x321[1], x241[1], x161[1], x081[1], x001[1]);
-   K[m ^ 1][2] = WHIRLPOOL_OP(x561[2], x481[2], x401[2], x321[2], x241[2], x161[2], x081[2], x001[2]);
-   K[m ^ 1][3] = WHIRLPOOL_OP(x561[3], x481[3], x401[3], x321[3], x241[3], x161[3], x081[3], x001[3]);
-   K[m ^ 1][4] = WHIRLPOOL_OP(x562[0], x482[0], x402[0], x322[0], x242[0], x162[0], x082[0], x002[0]);
-   K[m ^ 1][5] = WHIRLPOOL_OP(x562[1], x482[1], x402[1], x322[1], x242[1], x162[1], x082[1], x002[1]);
-   K[m ^ 1][6] = WHIRLPOOL_OP(x562[2], x482[2], x402[2], x322[2], x242[2], x162[2], x082[2], x002[2]);
-   K[m ^ 1][7] = WHIRLPOOL_OP(x562[3], x482[3], x402[3], x322[3], x242[3], x162[3], x082[3], x002[3]);
-}
+//static void OP_WHIRLPOOL_FUNC(uint64_t K[2][8], int m, uint64_t rc) {
+//   u256 ffs = _mm256_setr_epi64x(0xff,0xff,0xff,0xff);
+//
+//   u256 vecArr1 = get_sbox_values(K[m], 0);
+//   u256 vecArr2 = get_sbox_values(K[m], 4);
+//   u256 vec561 = SHIFTR(vecArr1, 56);
+//   u256 vec562 = SHIFTR(vecArr2, 56);
+//
+//
+//   vecArr1 = get_sbox_values(K[m], 7);
+//   vecArr2 = get_sbox_values(K[m], 11);
+//   u256 vec481 = AND(SHIFTR(vecArr1, 48), ffs);
+//   u256 vec482 = AND(SHIFTR(vecArr2, 48), ffs);
+//
+//   vecArr1 = get_sbox_values(K[m], 6);
+//   vecArr2 = get_sbox_values(K[m], 10);
+//   u256 vec401 = AND(SHIFTR(vecArr1, 40), ffs);
+//   u256 vec402 = AND(SHIFTR(vecArr2, 40), ffs);
+//
+//   vecArr1 = get_sbox_values(K[m], 5);
+//   vecArr2 = get_sbox_values(K[m], 9);
+//   u256 vec321 = AND(SHIFTR(vecArr1, 32), ffs);
+//   u256 vec322 = AND(SHIFTR(vecArr2, 32), ffs);
+//
+//   vecArr1 = get_sbox_values(K[m], 4);
+//   vecArr2 = get_sbox_values(K[m], 8);
+//   u256 vec241 = AND(SHIFTR(vecArr1, 24), ffs);
+//   u256 vec242 = AND(SHIFTR(vecArr2, 24), ffs);
+//
+//   vecArr1 = get_sbox_values(K[m], 3);
+//   vecArr2 = get_sbox_values(K[m], 7);
+//   u256 vec161 = AND(SHIFTR(vecArr1, 16), ffs);
+//   u256 vec162 = AND(SHIFTR(vecArr2, 16), ffs);
+//
+//   vecArr1 = get_sbox_values(K[m], 2);
+//   vecArr2 = get_sbox_values(K[m], 6);
+//   u256 vec081 = AND(SHIFTR(vecArr1, 8), ffs);
+//   u256 vec082 = AND(SHIFTR(vecArr2, 8), ffs);
+//
+//   vecArr1 = get_sbox_values(K[m], 1);
+//   vecArr2 = get_sbox_values(K[m], 5);
+//   u256 vec001 = AND(vecArr1, ffs);
+//   u256 vec002 = AND(vecArr2, ffs);
+//
+//   u256 temp1 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[0], vec561, 8);
+//   u256 temp2 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[1], vec481, 8);
+//   u256 temp3 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[2], vec401, 8);
+//   u256 temp4 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[3], vec321, 8);
+//   u256 temp5 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[4], vec241, 8);
+//   u256 temp6 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[5], vec161, 8);
+//   u256 temp7 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[6], vec081, 8);
+//   u256 temp8 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[7], vec001, 8);
+//
+//   u256 result1 = XOR8(temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8);
+//
+//   u256 temp11 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[0], vec562, 8);
+//   u256 temp21 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[1], vec482, 8);
+//   u256 temp31 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[2], vec402, 8);
+//   u256 temp41 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[3], vec322, 8);
+//   u256 temp51 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[4], vec242, 8);
+//   u256 temp61 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[5], vec162, 8);
+//   u256 temp71 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[6], vec082, 8);
+//   u256 temp81 = _mm256_i64gather_epi64(rhash_whirlpool_sbox[7], vec002, 8);
+//
+//   u256 result2 = XOR8(temp11, temp21, temp31, temp41, temp51, temp61, temp71, temp81);
+//
+//   u256 firstXor = XOR(_mm256_setr_epi64x(rc,0,0,0), result1);
+//
+//   _mm256_maskstore_epi64 (K[m ^ 1], _mm256_set1_epi64x(-1), firstXor);
+//   _mm256_maskstore_epi64 (&K[m ^ 1][4], _mm256_set1_epi64x(-1), result2);
+//
+//}
 
 /**
  * The core transformation. Process a 512-bit block.
@@ -177,7 +172,7 @@ static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
 		I64(0xbd5d10f4cb3e0567),
 		I64(0xe427418ba77d95d8),
 		I64(0xfbee7c66dd17479e),
-		I64(0xca2dbf07ad5a8333)
+		I64(0xca2dbf07ad5a8333),
 	};
 
 	/* map the message buffer to a block */
@@ -187,37 +182,157 @@ static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
 		state[0][i] = be2me_64(p_block[i]) ^ hash[i];
 		hash[i] = state[0][i];
 	}
+   
+   u256 temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8, Xor1, vec001, vec002, vec081, vec082, vec161, vec162, vec241, vec242, vec321, vec322, vec401, vec402, vec481, vec482, vec561, vec562;
 
 	/* iterate over algorithm rounds */
 	for (i = 0; i < number_of_rounds; i++)
 	{
       
-      OP_WHIRLPOOL_FUNC(K, m);
-      K[m ^ 1][0] = K[m ^ 1][0] ^ rc[i];
+      int notM = m ^ 1;
       
+      uint64_t* stateM = state[m];
+      uint64_t* kM = K[m];
+      uint64_t* sbox0 = rhash_whirlpool_sbox[0];
+      uint64_t* sbox1 = rhash_whirlpool_sbox[1];
+      uint64_t* sbox2 = rhash_whirlpool_sbox[2];
+      uint64_t* sbox3 = rhash_whirlpool_sbox[3];
+      uint64_t* sbox4 = rhash_whirlpool_sbox[4];
+      uint64_t* sbox5 = rhash_whirlpool_sbox[5];
+      uint64_t* sbox6 = rhash_whirlpool_sbox[6];
+      uint64_t* sbox7 = rhash_whirlpool_sbox[7];
       
-//      K[1][0] = WHIRLPOOL_OP(K[0], 0) ^ rc[i];
-//      K[1][1] = WHIRLPOOL_OP(K[0], 1);
-//      K[1][2] = WHIRLPOOL_OP(K[0], 2);
-//      K[1][3] = WHIRLPOOL_OP(K[0], 3);
-//      K[1][4] = WHIRLPOOL_OP(K[0], 4);
-//      K[1][5] = WHIRLPOOL_OP(K[0], 5);
-//      K[1][6] = WHIRLPOOL_OP(K[0], 6);
-//      K[1][7] = WHIRLPOOL_OP(K[0], 7);
+      //initialize K vectors
+      u256 vecArrK561 = get_sbox_values(kM, 0);
+      u256 vecArrK562 = get_sbox_values(kM, 4);
+      u256 vecArrK481 = get_sbox_values(kM, 7);
+      u256 vecArrK482 = get_sbox_values(kM, 11);
+      u256 vecArrK401 = get_sbox_values(kM, 6);
+      u256 vecArrK402 = get_sbox_values(kM, 10);
+      u256 vecArrK321 = get_sbox_values(kM, 5);
+      u256 vecArrK322 = get_sbox_values(kM, 9);
+      u256 vecArrK241 = get_sbox_values(kM, 4);
+      u256 vecArrK242 = get_sbox_values(kM, 8);
+      u256 vecArrK161 = get_sbox_values(kM, 3);
+      u256 vecArrK162 = get_sbox_values(kM, 7);
+      u256 vecArrK081 = get_sbox_values(kM, 2);
+      u256 vecArrK082 = get_sbox_values(kM, 6);
+      u256 vecArrK001 = get_sbox_values(kM, 1);
+      u256 vecArrK002 = get_sbox_values(kM, 5);
       
-      OP_WHIRLPOOL_FUNC(state, m);
+      //initialize state vectors
+      u256 vecArrState561 = get_sbox_values(stateM, 0);
+      u256 vecArrState562 = get_sbox_values(stateM, 4);
+      u256 vecArrState481 = get_sbox_values(stateM, 7);
+      u256 vecArrState482 = get_sbox_values(stateM, 11);
+      u256 vecArrState401 = get_sbox_values(stateM, 6);
+      u256 vecArrState402 = get_sbox_values(stateM, 10);
+      u256 vecArrState321 = get_sbox_values(stateM, 5);
+      u256 vecArrState322 = get_sbox_values(stateM, 9);
+      u256 vecArrState241 = get_sbox_values(stateM, 4);
+      u256 vecArrState242 = get_sbox_values(stateM, 8);
+      u256 vecArrState161 = get_sbox_values(stateM, 3);
+      u256 vecArrState162 = get_sbox_values(stateM, 7);
+      u256 vecArrState081 = get_sbox_values(stateM, 2);
+      u256 vecArrState082 = get_sbox_values(stateM, 6);
+      u256 vecArrState001 = get_sbox_values(stateM, 1);
+      u256 vecArrState002 = get_sbox_values(stateM, 5);
+      
+      //initialize helper vectors
+      u256 ffs = _mm256_setr_epi64x(0xff,0xff,0xff,0xff);
+      u256 ones = _mm256_set1_epi64x(-1);
+      u256 rcXor = _mm256_setr_epi64x(rc[i],0,0,0);
+      
+      vec561 = SHIFTR(vecArrK561, 56);
+      vec562 = SHIFTR(vecArrK562, 56);
+      vec481 = AND(SHIFTR(vecArrK481, 48), ffs);
+      vec482 = AND(SHIFTR(vecArrK482, 48), ffs);
+      vec401 = AND(SHIFTR(vecArrK401, 40), ffs);
+      vec402 = AND(SHIFTR(vecArrK402, 40), ffs);
+      vec321 = AND(SHIFTR(vecArrK321, 32), ffs);
+      vec322 = AND(SHIFTR(vecArrK322, 32), ffs);
+      vec241 = AND(SHIFTR(vecArrK241, 24), ffs);
+      vec242 = AND(SHIFTR(vecArrK242, 24), ffs);
+      vec161 = AND(SHIFTR(vecArrK161, 16), ffs);
+      vec162 = AND(SHIFTR(vecArrK162, 16), ffs);
+      vec081 = AND(SHIFTR(vecArrK081, 8), ffs);
+      vec082 = AND(SHIFTR(vecArrK082, 8), ffs);
+      vec001 = AND(vecArrK001, ffs);
+      vec002 = AND(vecArrK002, ffs);
+      
+      temp1 = _mm256_i64gather_epi64(sbox0, vec561, 8);
+      temp2 = _mm256_i64gather_epi64(sbox1, vec481, 8);
+      temp3 = _mm256_i64gather_epi64(sbox2, vec401, 8);
+      temp4 = _mm256_i64gather_epi64(sbox3, vec321, 8);
+      temp5 = _mm256_i64gather_epi64(sbox4, vec241, 8);
+      temp6 = _mm256_i64gather_epi64(sbox5, vec161, 8);
+      temp7 = _mm256_i64gather_epi64(sbox6, vec081, 8);
+      temp8 = _mm256_i64gather_epi64(sbox7, vec001, 8);
+      
+      u256 Kresult1 = XOR8(temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8);
+      
+      temp1 = _mm256_i64gather_epi64(sbox0, vec562, 8);
+      temp2 = _mm256_i64gather_epi64(sbox1, vec482, 8);
+      temp3 = _mm256_i64gather_epi64(sbox2, vec402, 8);
+      temp4 = _mm256_i64gather_epi64(sbox3, vec322, 8);
+      temp5 = _mm256_i64gather_epi64(sbox4, vec242, 8);
+      temp6 = _mm256_i64gather_epi64(sbox5, vec162, 8);
+      temp7 = _mm256_i64gather_epi64(sbox6, vec082, 8);
+      temp8 = _mm256_i64gather_epi64(sbox7, vec002, 8);
+      
+      u256 Kresult2 = XOR8(temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8);
+      
+      Xor1 = XOR(rcXor, Kresult1);
 
-		/* apply the i-th round transformation */
-		state[m ^ 1][0] = state[m ^ 1][0] ^ K[m ^ 1][0];
-		state[m ^ 1][1] = state[m ^ 1][1] ^ K[m ^ 1][1];
-		state[m ^ 1][2] = state[m ^ 1][2] ^ K[m ^ 1][2];
-		state[m ^ 1][3] = state[m ^ 1][3] ^ K[m ^ 1][3];
-		state[m ^ 1][4] = state[m ^ 1][4] ^ K[m ^ 1][4];
-		state[m ^ 1][5] = state[m ^ 1][5] ^ K[m ^ 1][5];
-		state[m ^ 1][6] = state[m ^ 1][6] ^ K[m ^ 1][6];
-		state[m ^ 1][7] = state[m ^ 1][7] ^ K[m ^ 1][7];
+      vec561 = SHIFTR(vecArrState561, 56);
+      vec562 = SHIFTR(vecArrState562, 56);
+      vec481 = AND(SHIFTR(vecArrState481, 48), ffs);
+      vec482 = AND(SHIFTR(vecArrState482, 48), ffs);
+      vec401 = AND(SHIFTR(vecArrState401, 40), ffs);
+      vec402 = AND(SHIFTR(vecArrState402, 40), ffs);
+      vec321 = AND(SHIFTR(vecArrState321, 32), ffs);
+      vec322 = AND(SHIFTR(vecArrState322, 32), ffs);
+      vec241 = AND(SHIFTR(vecArrState241, 24), ffs);
+      vec242 = AND(SHIFTR(vecArrState242, 24), ffs);
+      vec161 = AND(SHIFTR(vecArrState161, 16), ffs);
+      vec162 = AND(SHIFTR(vecArrState162, 16), ffs);
+      vec081 = AND(SHIFTR(vecArrState081, 8), ffs);
+      vec082 = AND(SHIFTR(vecArrState082, 8), ffs);
+      vec001 = AND(vecArrState001, ffs);
+      vec002 = AND(vecArrState002, ffs);
+      
+      temp1 = _mm256_i64gather_epi64(sbox0, vec561, 8);
+      temp2 = _mm256_i64gather_epi64(sbox1, vec481, 8);
+      temp3 = _mm256_i64gather_epi64(sbox2, vec401, 8);
+      temp4 = _mm256_i64gather_epi64(sbox3, vec321, 8);
+      temp5 = _mm256_i64gather_epi64(sbox4, vec241, 8);
+      temp6 = _mm256_i64gather_epi64(sbox5, vec161, 8);
+      temp7 = _mm256_i64gather_epi64(sbox6, vec081, 8);
+      temp8 = _mm256_i64gather_epi64(sbox7, vec001, 8);
+      
+      u256 stateResult1 = XOR8(temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8);
+      
+      temp1 = _mm256_i64gather_epi64(sbox0, vec562, 8);
+      temp2 = _mm256_i64gather_epi64(sbox1, vec482, 8);
+      temp3 = _mm256_i64gather_epi64(sbox2, vec402, 8);
+      temp4 = _mm256_i64gather_epi64(sbox3, vec322, 8);
+      temp5 = _mm256_i64gather_epi64(sbox4, vec242, 8);
+      temp6 = _mm256_i64gather_epi64(sbox5, vec162, 8);
+      temp7 = _mm256_i64gather_epi64(sbox6, vec082, 8);
+      temp8 = _mm256_i64gather_epi64(sbox7, vec002, 8);
+      
+      u256 stateResult2 = XOR8(temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8);
+      
+      u256 stateXor1 = XOR(Xor1, stateResult1);
+      u256 stateXor2 = XOR(Kresult2, stateResult2);
+      
+      _mm256_maskstore_epi64 (state[notM], ones, stateXor1);
+      _mm256_maskstore_epi64 (state[notM] + 4, ones, stateXor2);
+      _mm256_maskstore_epi64 (K[notM], ones, Xor1);
+      _mm256_maskstore_epi64 (K[notM] + 4, ones, Kresult2);
 
-		m = m ^ 1;
+
+		m = notM;
 	}
 
 	/* apply the Miyaguchi-Preneel compression function */
