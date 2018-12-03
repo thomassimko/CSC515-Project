@@ -216,23 +216,40 @@ static int test(const uint8_t * input, size_t input_len, const char output[])
 	}
 }
 
+#define SIZEOF_DATA10MB 10000000
+#define SIZEOF_DATA50MB 50000000
+#define SIZEOF_DATA500MB 500000000
+#define SIZEOF_DATA1GB 1000000000
+
 int main(void)
 {
-	size_t i;
-	for (i = 0; i < (sizeof STRING_VECTORS / sizeof (struct string_vector)); i++) {
-		const struct string_vector *vector = &STRING_VECTORS[i];
-		if (string_test(vector->input, vector->output))
-			return 1;
-	}
-	construct_binary_messages();
-	for (i = 0; i < (sizeof vectors / sizeof (struct vector)); i++) {
-		const struct vector *vector = &vectors[i];
-		if (test(vector->input, vector->input_len, vector->output))
-		{
-			destruct_binary_messages();
-			return 1;
-		}
-	}
-	destruct_binary_messages();
-	return 0;
+   size_t i;
+   // construct_binary_messages();
+   // for (i = 0; i < (sizeof vectors / sizeof (struct vector)); i++) {
+   // const struct vector *vector = &vectors[i];
+   // if (test(vector->input, vector->input_len, vector->output))
+   // {
+   // destruct_binary_messages();
+   // return 1;
+   // }
+   // }
+   // destruct_binary_messages();
+   
+   static uint8_t * data;
+   long data_len = SIZEOF_DATA10MB;
+   
+   data = malloc(data_len);
+   memset(data, 0x5a, data_len);
+   
+   uint8_t hash[32];
+   char hash_string[65];
+   calc_sha_256(hash, data, data_len);
+   hash_to_string(hash_string, hash);
+   printf("input starts with 0x%02x, length %lu\n", *data, (unsigned long) data_len);
+   printf("hash : %s\n", hash_string);
+   
+   free(data);
+   
+   
+   return 0;
 }
