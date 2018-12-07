@@ -326,10 +326,28 @@ static void rhash_whirlpool_process_block(uint64_t *hash, uint64_t* p_block)
       u256 stateXor1 = XOR(Xor1, stateResult1);
       u256 stateXor2 = XOR(Kresult2, stateResult2);
       
-      _mm256_maskstore_epi64 (state[notM], ones, stateXor1);
-      _mm256_maskstore_epi64 (state[notM] + 4, ones, stateXor2);
-      _mm256_maskstore_epi64 (K[notM], ones, Xor1);
-      _mm256_maskstore_epi64 (K[notM] + 4, ones, Kresult2);
+      uint64_t* newState1 = (uint64_t*) &stateXor1;
+      uint64_t* newState2 = (uint64_t*) &stateXor2;
+      uint64_t* newK1 = (uint64_t*) &Xor1;
+      uint64_t* newK2 = (uint64_t*) &Kresult2;
+      
+      state[notM][0] = newState1[0];
+      state[notM][1] = newState1[1];
+      state[notM][2] = newState1[2];
+      state[notM][3] = newState1[3];
+      state[notM][4] = newState2[4];
+      state[notM][5] = newState2[5];
+      state[notM][6] = newState2[6];
+      state[notM][7] = newState2[7];
+      
+      K[notM][0] = newK1[0];
+      K[notM][1] = newK1[1];
+      K[notM][2] = newK1[2];
+      K[notM][3] = newK1[3];
+      K[notM][4] = newK2[4];
+      K[notM][5] = newK2[5];
+      K[notM][6] = newK2[6];
+      K[notM][7] = newK2[7];
 
 
 		m = notM;
